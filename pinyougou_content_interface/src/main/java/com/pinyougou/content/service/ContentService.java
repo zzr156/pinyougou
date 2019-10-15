@@ -57,5 +57,10 @@ public interface ContentService {
 	 * @return
 	 */
 	public PageResult findPage(TbContent content, int pageNum, int pageSize);
+
+	/**
+	 * 根据 分类 查询 广告图片
+	 */
+	public List<TbContent> findByCategoryId(long categoryId);
 	
 }
