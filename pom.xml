@@ -13,12 +13,15 @@
         <module>pinyougou_common</module>
         <module>pinyougou_sellergoods_interface</module>
         <module>pinyougou_sellergoods_service</module>
-
         <module>pinyougou_shop_web</module>
         <module>pinyougou_manager</module>
         <module>pinyougou_content_interface</module>
         <module>pinyougou_content_service</module>
         <module>pinyougou_portal_web</module>
+        <module>pinyougou_solr_utils</module>
+        <module>pinyougou_search_interface</module>
+        <module>pinyougou_search_service</module>
+        <module>pinyougou_search_web</module>
 
 
     </modules>
@@ -275,6 +278,13 @@
         </dependencies>
 
     </dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <version>1.7.10</version>
+        </dependency>
+    </dependencies>
 
 
 
