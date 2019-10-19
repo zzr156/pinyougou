@@ -47,6 +47,8 @@ public class TbItem  implements Serializable {
     private String sellerId;
 
     private String cartThumbnail;
+
+    //商品分类字段
     @Field("item_category")
     private String category;
     @Field("item_brand")

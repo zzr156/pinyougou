@@ -13,6 +13,7 @@ import com.pinyougou.pojo.TbItemCatExample.Criteria;
 
 
 import entity.PageResult;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -99,18 +100,45 @@ public class ItemCatServiceImpl implements IItemCatService {
 	
 		}
 			PageHelper.startPage(pageNum, pageSize);
-		Page<TbItemCat> page= (Page<TbItemCat>)itemCatMapper.selectByExample(example);		
-		return new PageResult(page.getTotal(), page.getResult());
+		Page<TbItemCat> page= (Page<TbItemCat>)itemCatMapper.selectByExample(example);
+
+			//投注  缓存
+
+			//每次执行查询的时候，一次性读取缓存进行存储 (因为每次增删改都要执行此方法)
+			List<TbItemCat> list = findAll();
+			for(TbItemCat itemCat1:list){
+				redisTemplate.boundHashOps("itemCat").put(
+						itemCat1.getName(), itemCat1.getTypeId()
+				);
+			}
+			System.out.println("更新缓存:商品分类表");
+			//投注  缓存
+
+			return new PageResult(page.getTotal(), page.getResult());
 
 	}
+	@Autowired
+	private RedisTemplate redisTemplate;
 
 	@Override
 	public List<TbItemCat> findByParentId(Long pid) {
 		TbItemCatExample example=new TbItemCatExample();
 		Criteria criteria = example.createCriteria();
 
-
 		criteria.andParentIdEqualTo(pid);
+
+		//投注  缓存
+
+
+		//每次执行查询的时候，一次性读取缓存进行存储 (因为每次增删改都要执行此方法)
+		List<TbItemCat> list = findAll();
+		for(TbItemCat itemCat:list){
+			redisTemplate.boundHashOps("itemCat").put(
+					itemCat.getName(), itemCat.getTypeId()
+			);
+		}
+		System.out.println("更新缓存:商品分类表");
+		//投注  缓存
 
 		return itemCatMapper.selectByExample(example);
 		}
