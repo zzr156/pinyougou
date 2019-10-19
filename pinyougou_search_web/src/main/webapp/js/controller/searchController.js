@@ -7,16 +7,20 @@ app.controller('searchController',function($scope,searchService){
             function(response){
                 $scope.resultMap=response;//搜索返回的结果
                 // alert(JSON.stringify(response.rows[0]));
+
+                //分页构件 分页栏
+                $scope.pageLabel=[];
+                $scope.buildPageLabel();
             }
         );
     }
 
     //   定义 筛选模型
-    $scope.searchMap={'keywords':'','category':'','brand':'','spec':{}};
+    $scope.searchMap={'keywords':'','category':'','brand':'','spec':{},'price':'','pageNo':1,'pageSize':40};
     //维持 模型
     $scope.addSearchItem=function (key,value) {
         // 初始。牵引因子：key-value  点击所选的统属上级，以及自身实例质点
-        if (key == 'category' || key == 'brand') {
+        if (key == 'category' || key == 'brand'||key=='price') {
 
             $scope.searchMap[key]=value;
         }else {
@@ -39,11 +43,21 @@ app.controller('searchController',function($scope,searchService){
     //移除复合搜索条件
     $scope.removeSearchItem=function(key){
 
-        if(key=="category" ||  key=="brand"){//如果是分类或品牌
+        if(key=="category" ||  key=="brand"||key=='price'){//如果是分类或品牌
             $scope.searchMap[key]="";
         }else{//否则是规格
             delete $scope.searchMap.spec[key];//移除此属性
         }
         $scope.search();//执行搜索
     }
+
+
+    // 分页维持机制
+    $scope.buildPageLabel=function () {
+        //获取分页栏 索引
+        for(var i =1; i<=$scope.resultMap.totalPages;i++){
+            $scope.pageLabel.push(i);
+        }
+    }
+
 });

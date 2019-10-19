@@ -31,7 +31,7 @@ public class ItemSearchServiceImpl implements ItemSearchService {
         //查询商品 分类
 
         List<String> categoryList = searchCategory(searchMap);
-        map.put("categoryList",categoryList );
+        map.put("categoryList", categoryList);
 
         //获取 品牌类别 和 规格列表
        /* if (categoryList.size() > 0) {
@@ -39,11 +39,11 @@ public class ItemSearchServiceImpl implements ItemSearchService {
         }
 */
         //3.查询品牌和规格列表
-        String categoryName=(String)searchMap.get("category");
-        if(!"".equals(categoryName)){//如果有分类名称
+        String categoryName = (String) searchMap.get("category");
+        if (!"".equals(categoryName)) {//如果有分类名称
             map.putAll(searchSpecAndBrand(categoryName));
-        }else{//如果没有分类名称，按照第一个查询
-            if(categoryList.size()>0){    //此处：caList是回流列表 中 的 数据，而上的 判断则是对指 searchMap的数据
+        } else {//如果没有分类名称，按照第一个查询
+            if (categoryList.size() > 0) {    //此处：caList是回流列表 中 的 数据，而上的 判断则是对指 searchMap的数据
                 map.putAll(searchSpecAndBrand(categoryList.get(0)));
             }
         }
@@ -62,7 +62,7 @@ public class ItemSearchServiceImpl implements ItemSearchService {
         //fieldname=查询的是  分类字段，保障：有域 定义，有实体类字段映射绑定
         Criteria criteria = new Criteria("item_keywords").is(searchMap.get("keywords"));
 
-            //围堵深入，继续 设置 分组细节：
+        //围堵深入，继续 设置 分组细节：
         GroupOptions groupOptions = new GroupOptions();
         groupOptions.addGroupByField("item_category");
 
@@ -117,7 +117,7 @@ public class ItemSearchServiceImpl implements ItemSearchService {
         highlightQuery.setHighlightOptions(highlightOptions);
 
 
-          //投注过滤 效果  : 分类 不为空，有 筛选-过滤
+        //投注过滤 效果  : 分类 不为空，有 筛选-过滤
         if (!"".equals(searchMap.get("category"))) {
             //过滤用 脉络
             FilterQuery filterQuery = new SimpleQuery();
@@ -131,26 +131,50 @@ public class ItemSearchServiceImpl implements ItemSearchService {
 
         if (!"".equals(searchMap.get("brand"))) {
 
-     Criteria filterCriteria=new Criteria("item_brand").is(searchMap.get("brand"));
-         //通过 不同的专用实现 类，实现上下 统属关系
+            Criteria filterCriteria = new Criteria("item_brand").is(searchMap.get("brand"));
+            //通过 不同的专用实现 类，实现上下 统属关系
 
-            FilterQuery filterQuery=new SimpleFilterQuery(filterCriteria);
+            FilterQuery filterQuery = new SimpleFilterQuery(filterCriteria);
 
             highlightQuery.addFilterQuery(filterQuery);
         }
 
         if (searchMap.get("spec") != null) {
-            Map<String,String> specMap= (Map) searchMap.get("spec");
-            for(String key:specMap.keySet() ){
-                Criteria filterCriteria=new Criteria("item_spec_"+key);
-                filterCriteria.is( specMap.get(key) );
+            Map<String, String> specMap = (Map) searchMap.get("spec");
+            for (String key : specMap.keySet()) {
+                Criteria filterCriteria = new Criteria("item_spec_" + key);
+                filterCriteria.is(specMap.get(key));
 
-                FilterQuery filterQuery=new SimpleFilterQuery(filterCriteria);
+                FilterQuery filterQuery = new SimpleFilterQuery(filterCriteria);
                 highlightQuery.addFilterQuery(filterQuery);
             }
         }
 
+        //1.5.过滤价格
+        if (!"".equals(searchMap.get("price"))) {
 
+            Map map1 = searchPrice((String) searchMap.get("price"));
+            highlightQuery.addFilterQuery((FilterQuery) map1.get("less"));
+
+            if ((FilterQuery) map1.get("greater") != null) {
+
+                highlightQuery.addFilterQuery((FilterQuery) map1.get("greater"));
+                //如果 是* 则 此 值为null,此操作空指针
+
+            }
+        }
+
+        //1.6  分页
+        Integer pageNo = (Integer) searchMap.get("pageNo");
+        if (pageNo==null) {
+            pageNo=1;
+        }
+        Integer pageSize = (Integer) searchMap.get("pageSize");
+        if (pageSize==null){
+            pageSize=20;
+        }
+        highlightQuery.setOffset(pageNo);
+        highlightQuery.setRows(pageSize);
 
         //执行 查询索引库
         HighlightPage<TbItem> pageItems = solrTemplate.queryForHighlightPage(highlightQuery, TbItem.class);
@@ -160,10 +184,6 @@ public class ItemSearchServiceImpl implements ItemSearchService {
 
         for (HighlightEntry<TbItem> entry : highlightEntryList) {
             //获取 样式单体  sns :获取 域单体
-              /*  for (HighlightEntry.Highlight highlight:entry.getHighlights()
-                         ) {// 继续 遍历sns  获取 单体
-                        List<String> sns = highlight.getSnipplets();
-                    }*/
             if (entry.getHighlights().size() > 0 && entry.getHighlights().get(0).getSnipplets().size() > 0) {
                 //如果递进的两个列表 都 有值
                 String s = entry.getHighlights().get(0).getSnipplets().get(0);
@@ -174,20 +194,24 @@ public class ItemSearchServiceImpl implements ItemSearchService {
         }
         //填充到运载容器中
         map.put("rows", pageItems.getContent());
+
+        //填充 分页 回流数据
+        map.put("totalPages", pageItems.getTotalPages());
+        map.put("total", pageItems.getTotalElements());
         return map;
     }
 
     /**
      * 根据 商品分类  获取 商品 品牌列表 和 规格列表
      */
- @Autowired
-   private RedisTemplate redisTemplate;
+    @Autowired
+    private RedisTemplate redisTemplate;
 
     private Map searchSpecAndBrand(String categoryId) {
         Map map = new HashMap();
         //从缓存中 获取 模板id  以 分类名--模板ID
-         Long typeTemId = (long)redisTemplate.boundHashOps("itemCat").get(categoryId);
-        if (typeTemId !=null) {
+        Long typeTemId = (long) redisTemplate.boundHashOps("itemCat").get(categoryId);
+        if (typeTemId != null) {
 
             //从缓存中 获取  品牌列表 和 规格列表
             List brandList = (List) redisTemplate.boundHashOps("brandList").get(typeTemId);
@@ -199,4 +223,37 @@ public class ItemSearchServiceImpl implements ItemSearchService {
 
         return map;
     }
+
+
+    /**
+     * 过滤 价格
+     */
+    private Map searchPrice(String priceStr) {
+        Map map = new HashMap();
+        //字符处理 获取 数据
+
+        String[] price = priceStr.split("-");
+
+        if (!"0".equals(price[0])) {//如果  大于零，即此数值作  查询条件 的 区间 下限(双向限制)
+            FilterQuery filterQuery1 = new SimpleQuery();
+            Criteria item_price = new Criteria("item_price");
+            item_price.greaterThanEqual(price[0]);
+            filterQuery1.addCriteria(item_price);
+            map.put("less", filterQuery1);
+        }
+        System.out.println(price[1]);
+        if (!"*".equals(price[1])) {// 如果   是*  ，即上限无线 （单向区间）
+            FilterQuery filterQuery2 = new SimpleQuery();
+            Criteria item_price = new Criteria("item_price");
+            item_price.lessThanEqual(price[1]);
+
+            filterQuery2.addCriteria(item_price);
+            map.put("greater", filterQuery2);
+        }
+
+
+        return map;
+
+    }
 }
+
