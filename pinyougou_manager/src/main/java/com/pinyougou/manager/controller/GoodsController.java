@@ -1,6 +1,9 @@
 package com.pinyougou.manager.controller;
+import java.util.Arrays;
 import java.util.List;
 
+import com.pinyougou.pojo.TbItem;
+import com.pinyougou.search.service.ItemSearchService;
 import com.pinyougou.sellergoods.service.IGoodsService;
 import entity.Goods;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -22,6 +25,9 @@ public class GoodsController {
 
 	@Reference
 	private IGoodsService goodsService;
+	@Reference(timeout = 100000)
+	private ItemSearchService searchServic;
+
 	
 	/**
 	 * 返回全部列表
@@ -93,6 +99,9 @@ public class GoodsController {
 	public Result delete(Long [] ids){
 		try {
 			goodsService.delete(ids);
+
+			searchServic.deleteList(Arrays.asList(ids));
+
 			return new Result(true, "删除成功"); 
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -121,6 +130,19 @@ public class GoodsController {
 	public Result updateStatus(Long[] ids, String status){
 		try {
 			goodsService.updateStatus(ids, status);
+
+			//插入 索引库 操作。审核后触发 ，导入索引库
+			if ("1".equals(status)) {
+				// 有可能 是增加也有可能是 减少，新增时 触发 索引库操作
+				List<TbItem> itemList = goodsService.findItemByGoodsIdAndStatus(ids, status);
+				//调用搜索接口实现数据批量导入
+				if(itemList.size()>0){
+					searchServic.importList(itemList);
+				}else{
+					System.out.println("没有明细数据");
+				}
+			}
+
 			return new Result(true, "成功");
 		} catch (Exception e) {
 			e.printStackTrace();

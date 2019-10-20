@@ -31,10 +31,9 @@ public class SolrUtils {
         SolrUtils solrUtils = (SolrUtils) context.getBean("solrUtils");//由配置 加载 ，触发 注解扫描，注解标志生效，默认首字母小写
 
         //调用工具类 方法 ,触发 实例 执行
-        solrUtils.importItemData();
-
+//        solrUtils.importItemData();
         //删除清空索引库
-//     solrUtils.deleSolr();
+    solrUtils.deleSolr();
 
 
     }
